@@ -72,6 +72,11 @@ Configure(){
          -e "s%<TranscodingTempPath>.*%<TranscodingTempPath>/media</TranscodingTempPath>%" \
          "${config_dir}/config/encoding.xml"
 
+      echo "$(date '+%c') INFO:    Configure metadata directory to /metadata volume"
+      sed -i \
+         -e "s%<MetadataPath>.*%<MetadataPath>/metadata</MetadataPath>%" \
+         "${config_dir}/config/system.xml"
+
       echo "$(date '+%c') INFO:    Enable remote access"
       sed -i \
             -e "s%<EnableRemoteAccess>.*%<EnableRemoteAccess>true</EnableRemoteAccess>%" \
