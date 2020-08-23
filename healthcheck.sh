@@ -5,7 +5,7 @@ if [ "$(netstat -plnt | grep -c 8096)" -ne 1 ]; then
    exit 1
 fi
 
-if [ "$(ip -o addr | grep "$(hostname -i)" | wc -l)" -eq 0 ]; then
+if [ "$(hostname -i 2>/dev/null | grep -oE "\b([0-9]{1,3}\.){3}[0-9]{1,3}\b" | wc -l)" -eq 0 ]; then
    echo "NIC missing"
    exit 1
 fi
