@@ -5,7 +5,7 @@ ARG jellyfin_version="10.5.6"
 ARG app_dependencies="tzdata ca-certificates openssl iproute2 net-tools sqlite3"
 ENV config_dir="/config"
 
-RUN echo "$(date '+%d/%m/%Y - %H:%M:%S') | ***** BUILD STARTED *****" && \
+RUN echo "$(date '+%d/%m/%Y - %H:%M:%S') | ***** BUILD STARTED FOR JELLYFIN *****" && \
 echo "$(date '+%d/%m/%Y - %H:%M:%S') | Install application dependencies" && \
    apt-get update && \
    apt-get install -y ${app_dependencies}
