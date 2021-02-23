@@ -4,6 +4,7 @@
 Initialise(){
    IFS=,
    lan_ip="$(hostname -i)"
+   default_gateway="$(ip route | grep "^default" | awk '{print $3}')"
    docker_lan_ip_subnet="$(ip -4 route | grep "${lan_ip}" | grep -v via | awk '{print $1}')"
    search_domain="$(grep search "/etc/resolv.conf" | awk '{print$2}')"
    server_name="$(hostname)"
@@ -12,7 +13,7 @@ Initialise(){
    echo
    echo "$(date '+%c') INFO:    ***** Starting application container *****"
    echo "$(date '+%c') INFO:    $(cat /etc/*-release | grep "PRETTY_NAME" | sed 's/PRETTY_NAME=//g' | sed 's/"//g')"
-   echo "$(date '+%c') INFO:    Username: ${stack_user:=stackman}:${user_id:=1000}"
+   echo "$(date '+%c') INFO:    Username: ${stack_user:=stackman}:${stack_uid:=1000}"
    echo "$(date '+%c') INFO:    Password: ${stack_password:=Skibidibbydibyodadubdub}"
    echo "$(date '+%c') INFO:    Group: ${group:=jellyfin}:${group_id:=1000}"
    echo "$(date '+%c') INFO:    Configuration directory: ${config_dir:=/config}"
@@ -24,9 +25,9 @@ Initialise(){
    echo "$(date '+%c') INFO:    Docker network: ${docker_lan_ip_subnet}"
 }
 
-CheckOpenVPNPIA(){
-   if [ "${openvpnpia_enabled}" ]; then
-      echo "$(date '+%c') INFO:    OpenVPNPIA is enabled. Wait for VPN to connect"
+CheckPIANextGen(){
+   if [ "${pianextgen_enabled}" ]; then
+      echo "$(date '+%c') INFO:    PIANextGen is enabled. Wait for VPN to connect"
       vpn_adapter="$(ip addr | grep tun.$ | awk '{print $7}')"
       while [ -z "${vpn_adapter}" ]; do
          vpn_adapter="$(ip addr | grep tun.$ | awk '{print $7}')"
@@ -34,7 +35,14 @@ CheckOpenVPNPIA(){
       done
       echo "$(date '+%c') INFO:    VPN adapter available: ${vpn_adapter}"
    else
-      echo "$(date '+%c') INFO:    OpenVPNPIA is not enabled"
+      echo "$(date '+%c') INFO:    PIANextGen shared network stack is not enabled, configure container forwarding mode mode"
+      pianextgen_host="$(getent hosts pianextgen | awk '{print $1}')"
+      echo "$(date '+%c') INFO:    PIANextGen container IP address: ${pianextgen_host}"
+      echo "$(date '+%c') INFO:    Create default route via ${pianextgen_host}"
+      ip route del default 
+      ip route add default via "${pianextgen_host}"
+      echo "$(date '+%c') INFO:    Create additional route to Docker host network ${host_lan_ip_subnet} via ${default_gateway}"
+      ip route add "${host_lan_ip_subnet}" via "${default_gateway}"
    fi
 }
 
@@ -63,20 +71,20 @@ CreateGroup(){
 }
 
 CreateUser(){
-   if [ "$(grep -c "^${user}:x:${user_id}:${group_id}" "/etc/passwd")" -eq 1 ]; then
-      echo "$(date '+%c') INFO     User, ${user}:${user_id}, already created"
+   if [ "$(grep -c "^${user}:x:${stack_uid}:${group_id}" "/etc/passwd")" -eq 1 ]; then
+      echo "$(date '+%c') INFO     User, ${user}:${stack_uid}, already created"
    else
       if [ "$(grep -c "^${user}:" "/etc/passwd")" -eq 1 ]; then
          echo "$(date '+%c') ERROR    User name, ${user}, already in use - exiting"
          sleep 120
          exit 1
-      elif [ "$(grep -c ":x:${user_id}:$" "/etc/passwd")" -eq 1 ]; then
-         echo "$(date '+%c') ERROR    User id, ${user_id}, already in use - exiting"
+      elif [ "$(grep -c ":x:${stack_uid}:$" "/etc/passwd")" -eq 1 ]; then
+         echo "$(date '+%c') ERROR    User id, ${stack_uid}, already in use - exiting"
          sleep 120
          exit 1
       else
-         echo "$(date '+%c') INFO     Creating user ${user}:${user_id}"
-         adduser --quiet --system --shell /bin/bash --no-create-home --disabled-login --ingroup "${group}" --uid "${user_id}" "${stack_user}"
+         echo "$(date '+%c') INFO     Creating user ${user}:${stack_uid}"
+         adduser --quiet --system --shell /bin/bash --no-create-home --disabled-login --ingroup "${group}" --uid "${stack_uid}" "${stack_user}"
       fi
    fi
 }
@@ -166,7 +174,7 @@ Configure(){
             "${config_dir}/config/system.xml"
          echo -e "  <LocalNetworkSubnets>\n    <string>${docker_lan_ip_subnet}</string>\n    <string>${host_lan_ip_subnet}</string>\n  </LocalNetworkSubnets>\n</ServerConfiguration>" >> "${config_dir}/config/system.xml"
       fi
-      if [ "${jellyfin_enabled}" ]; then
+      if getent hosts jellyfin >/dev/null 2>&1; then
          echo "$(date '+%c') INFO:    NGINX reverse proxy enabled"
          if [ "$(grep -c "<IsBehindProxy>" "${config_dir}/config/system.xml")" -eq 0 ]; then
             sed -i \
@@ -229,7 +237,7 @@ LaunchJellyfin(){
 
 ##### Script #####
 Initialise
-CheckOpenVPNPIA
+CheckPIANextGen
 CreateGroup
 CreateUser
 SetOwnerAndGroup
