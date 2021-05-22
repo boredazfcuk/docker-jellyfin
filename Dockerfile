@@ -1,7 +1,7 @@
 FROM jellyfin/jellyfin
 MAINTAINER boredazfcuk
 
-ARG jellyfin_version="10.5.6"
+ARG jellyfin_version="10.7.5"
 ARG app_dependencies="tzdata ca-certificates openssl iproute2 net-tools sqlite3"
 ENV config_dir="/config"
 
