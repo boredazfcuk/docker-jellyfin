@@ -71,11 +71,11 @@ CreateGroup(){
 }
 
 CreateUser(){
-   if [ "$(grep -c "^${user}:x:${stack_uid}:${group_id}" "/etc/passwd")" -eq 1 ]; then
+   if [ "$(grep -c "^${stack_user}:x:${stack_uid}:${group_id}" "/etc/passwd")" -eq 1 ]; then
       echo "$(date '+%c') INFO     User, ${user}:${stack_uid}, already created"
    else
-      if [ "$(grep -c "^${user}:" "/etc/passwd")" -eq 1 ]; then
-         echo "$(date '+%c') ERROR    User name, ${user}, already in use - exiting"
+      if [ "$(grep -c "^${stack_user}:" "/etc/passwd")" -eq 1 ]; then
+         echo "$(date '+%c') ERROR    User name, ${stack_user}, already in use - exiting"
          sleep 120
          exit 1
       elif [ "$(grep -c ":x:${stack_uid}:$" "/etc/passwd")" -eq 1 ]; then
@@ -83,7 +83,7 @@ CreateUser(){
          sleep 120
          exit 1
       else
-         echo "$(date '+%c') INFO     Creating user ${user}:${stack_uid}"
+         echo "$(date '+%c') INFO     Creating user ${stack_user}:${stack_uid}"
          adduser --quiet --system --shell /bin/bash --no-create-home --disabled-login --ingroup "${group}" --uid "${stack_uid}" "${stack_user}"
       fi
    fi
